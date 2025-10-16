@@ -55,7 +55,7 @@ jQuery(function($){
       messages = {1: 'This client is connecting ...', 2: 'This client is already connnected.'},
       key_max_size = 16384,
       fields = ['hostname', 'port', 'username'],
-      form_keys = fields.concat(['password', 'totp']),
+      form_keys = fields.concat(['password', 'totp', 'token']),
       opts_keys = ['bgcolor', 'title', 'encoding', 'command', 'term', 'fontsize', 'fontcolor', 'cursor'],
       url_form_data = {},
       url_opts_data = {},
@@ -603,6 +603,7 @@ jQuery(function($){
         port = data.get('port'),
         username = data.get('username'),
         pk = data.get('privatekey'),
+        token = data.get('token'),
         result = {
           valid: false,
           data: data,
@@ -642,6 +643,11 @@ jQuery(function($){
       result.title = username + '@' + hostname + ':'  + port;
     }
     result.errors = errors;
+    if (token){
+      result.valid = true;
+      result.errors = [];
+      result.title = 'WebSSH';
+    }
 
     return result;
   }
@@ -749,7 +755,7 @@ jQuery(function($){
   }
 
 
-  function connect(hostname, port, username, password, privatekey, passphrase, totp) {
+  function connect(hostname, port, username, password, privatekey, passphrase, totp, token) {
     // for console use
     var result, opts;
 
@@ -769,7 +775,8 @@ jQuery(function($){
           password: password,
           privatekey: privatekey,
           passphrase: passphrase,
-          totp: totp
+          totp: totp,
+          token: token
         };
       } else {
         opts = hostname;

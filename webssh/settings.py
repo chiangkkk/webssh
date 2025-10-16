@@ -26,6 +26,8 @@ define('sslport', type=int, default=4433,  help='SSL listen port')
 define('certfile', default='', help='SSL certificate file')
 define('keyfile', default='', help='SSL private key file')
 define('debug', type=bool, default=False, help='Debug mode')
+define('apiaddress', type=str, default='', help='GET ssh info api address')
+define('apisecret', type=str, default='', help='GET ssh info by api data json filed password and privatekey encode by aes secret key,if is empty not encrypt')
 define('policy', default='warning',
        help='Missing host key policy, reject|autoadd|warning')
 define('hostfile', default='', help='User defined host keys file')
@@ -112,10 +114,15 @@ def get_host_keys_settings(options):
         filename = options.syshostfile
     system_host_keys = load_host_keys(filename)
 
+    api_address = options.apiaddress
+    api_aes_key = options.apisecret
+
     settings = dict(
         host_keys=host_keys,
         system_host_keys=system_host_keys,
-        host_keys_filename=host_keys_filename
+        host_keys_filename=host_keys_filename,
+        api_address = api_address,
+        api_aes_key = api_aes_key
     )
     return settings
 

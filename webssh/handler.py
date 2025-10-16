@@ -15,9 +15,11 @@ from tornado.process import cpu_count
 from webssh.utils import (
     is_valid_ip_address, is_valid_port, is_valid_hostname, to_bytes, to_str,
     to_int, to_ip_address, UnicodeType, is_ip_hostname, is_same_primary_domain,
-    is_valid_encoding
+    is_valid_encoding, decrypt_aes
 )
 from webssh.worker import Worker, recycle_worker, clients
+
+from tornado.httpclient import AsyncHTTPClient, HTTPError
 
 try:
     from json.decoder import JSONDecodeError
@@ -316,6 +318,8 @@ class IndexHandler(MixinHandler, tornado.web.RequestHandler):
 
     executor = ThreadPoolExecutor(max_workers=cpu_count()*5)
 
+    client = AsyncHTTPClient()
+
     def initialize(self, loop, policy, host_keys_settings):
         super(IndexHandler, self).initialize(loop)
         self.policy = policy
@@ -504,7 +508,9 @@ class IndexHandler(MixinHandler, tornado.web.RequestHandler):
         self.check_origin()
 
         try:
-            args = self.get_args()
+            args = yield self.fetch_args_by_api_token()
+            if args is None:
+                args = self.get_args()
         except InvalidValueError as exc:
             raise tornado.web.HTTPError(400, str(exc))
 
@@ -524,6 +530,88 @@ class IndexHandler(MixinHandler, tornado.web.RequestHandler):
             self.result.update(id=worker.id, encoding=worker.encoding)
 
         self.write(self.result)
+
+    @tornado.gen.coroutine
+    def fetch_args_by_api_token(self):
+        """调用外部服务接口获取 SSH 登录参数"""
+        api_address = self.host_keys_settings['api_address']
+        logging.debug(f"api_address {api_address}")
+        if api_address == '':
+            return None
+        # 外部服务接口地址（需替换为实际地址）
+        token = self.get_argument('token', u'')
+        if token is None or token == '':
+            return None
+        try:
+            url = f"{api_address}?token={token}"
+            logging.debug(f"fetch api url {url}")
+            response = yield self.client.fetch(url,request_timeout=5)
+            data = json.loads(response.body)
+            logging.debug(f"json parse over,{data}")
+            return self.parse_api_data(data)
+        except HTTPError as e:
+            logging.error(f"API request failed: {e.code}")
+            raise
+        except Exception as e:
+            logging.error(f"API error: {str(e)}")
+            raise
+
+    def parse_api_data(self, response):
+        """处理api返回报文信息 """
+        code = response['code']
+        if code != 20000:
+            raise InvalidValueError(response['message'])
+
+        data = response['data']
+        hostname = data['hostname']
+        if hostname is None or hostname == '':
+            return None
+        port = data['port']
+        if port is None or port == '' or  not is_valid_port(port):
+            return None
+        port = to_int(port)
+        username = data['username']
+        if username is None or username == '':
+            return None
+        password = data['password']
+        if password is None:
+            password = u''
+        privatekey = data['privatekey']
+        if privatekey is None:
+            privatekey = u''
+        filename = data['filename']
+        if filename is None:
+            filename = u''
+        passphrase = data['passphrase']
+        if passphrase is None:
+            passphrase = u''
+        totp = data['totp']
+        if totp is None:
+            totp = u''
+        ase_key = self.host_keys_settings['api_aes_key']
+        logging.info(f"api_aes_key={ase_key}")
+        if ase_key != '':
+            if password != '':
+                password = decrypt_aes(password,ase_key)
+            if privatekey != '':
+                privatekey = decrypt_aes(privatekey,ase_key)
+            if passphrase != '':
+                passphrase = decrypt_aes(passphrase,ase_key)
+
+
+
+        if isinstance(self.policy, paramiko.RejectPolicy):
+            self.lookup_hostname(hostname, port)
+
+        if privatekey:
+            pkey = PrivateKey(privatekey, passphrase, filename).get_pkey_obj()
+        else:
+            pkey = None
+
+        self.ssh_client.totp = totp
+        args = (hostname, port, username, password, pkey)
+        logging.debug(args)
+        return args
 
 
 class WsockHandler(MixinHandler, tornado.websocket.WebSocketHandler):

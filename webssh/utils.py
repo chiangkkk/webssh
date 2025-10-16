@@ -1,5 +1,8 @@
 import ipaddress
 import re
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+import base64
 
 try:
     from types import UnicodeType
@@ -145,3 +148,75 @@ def parse_origin_from_url(url):
         netloc = parsed.netloc
 
     return '{}://{}'.format(scheme, netloc)
+
+
+def decrypt_aes(content, key, charset='utf-8'):
+    """
+    AES解密方法 (默认使用AES/ECB/PKCS5Padding模式)
+
+    Args:
+        content (str): 待解密的内容（Base64编码）
+        key (str): 解密密钥  长度为 16 24 32字节  即128位、192位、256位 3种。
+        charset (str): 字符集，默认为'utf-8'
+
+    Returns:
+        str: 解密后的明文
+    """
+    # 将密钥转换为字节
+    key_bytes = key.encode(charset)
+
+    # Base64解码
+    encrypted_data = base64.b64decode(content)
+
+    # 创建AES解密器（ECB模式，PKCS5Padding）
+    cipher = Cipher(
+        algorithms.AES(key_bytes),
+        modes.ECB(),
+        backend=default_backend()
+    )
+
+    # 解密
+    decryptor = cipher.decryptor()
+    decrypted_data = decryptor.update(encrypted_data) + decryptor.finalize()
+
+    # 去除PKCS5填充并转换为字符串
+    pad_len = decrypted_data[-1]
+    decrypted_data = decrypted_data[:-pad_len]
+
+    return decrypted_data.decode(charset)
+
+
+def encrypt_aes(content, key, charset='utf-8'):
+    """
+    AES加密方法 (默认使用AES/ECB/PKCS5Padding模式)
+
+    Args:
+        content (str): 待加密的明文
+        key (str): 加密密钥 长度为 16 24 32字节 即128位、192位、256位 3种。
+        charset (str): 字符集，默认为'utf-8'
+
+    Returns:
+        str: 加密后的内容（Base64编码）
+    """
+    # 将密钥和内容转换为字节
+    key_bytes = key.encode(charset)
+    content_bytes = content.encode(charset)
+
+    # 添加PKCS5填充
+    block_size = 16  # AES块大小
+    pad_len = block_size - (len(content_bytes) % block_size)
+    if pad_len == 0:
+        pad_len = block_size
+    content_bytes += bytes([pad_len] * pad_len)
+
+    # 创建AES加密器（ECB模式，PKCS5Padding）
+    cipher = Cipher(
+        algorithms.AES(key_bytes),
+        modes.ECB(),
+        backend=default_backend()
+    )
+    encryptor = cipher.encryptor()
+    encrypted_data = encryptor.update(content_bytes) + encryptor.finalize()
+
+    # Base64编码并返回
+    return base64.b64encode(encrypted_data).decode(charset)

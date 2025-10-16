@@ -2,7 +2,7 @@ import unittest
 
 from webssh.utils import (
     is_valid_ip_address, is_valid_port, is_valid_hostname, to_str, to_bytes,
-    to_int, is_ip_hostname, is_same_primary_domain, parse_origin_from_url
+    to_int, is_ip_hostname, is_same_primary_domain, parse_origin_from_url, encrypt_aes, decrypt_aes
 )
 
 
@@ -125,3 +125,30 @@ class TestUitls(unittest.TestCase):
 
         url = 'http://www.example.com:443'
         self.assertEqual(parse_origin_from_url(url), url)
+
+
+    def test_encrypt_decrypt_aes_special_chars(self):
+        # 测试特殊字符的加解密
+        key = '1234567890123456' # 16位密码
+        plaintext = 'Hello, 世界! @#$%^&*()_+-={}[]|\\:;\"\'<>?,./'
+        encrypted = encrypt_aes(plaintext, key)
+        decrypted = decrypt_aes(encrypted, key)
+        self.assertEqual(decrypted, plaintext)
+        key = '123456789012345678901234' # 24位密码
+        plaintext = 'Hello, 世界! @#$%^&*()_+-={}[]|\\:;\"\'<>?,./'
+        encrypted = encrypt_aes(plaintext, key)
+        decrypted = decrypt_aes(encrypted, key)
+        self.assertEqual(decrypted, plaintext)
+        key = '12345678901234567890123456789012' # 32位密码
+        plaintext = 'Hello, 世界! @#$%^&*()_+-={}[]|\\:;\"\'<>?,./'
+        encrypted = encrypt_aes(plaintext, key)
+        decrypted = decrypt_aes(encrypted, key)
+        self.assertEqual(decrypted, plaintext)
+
+    def test_descript(self):
+        key = "DVDAIVDVDAIVDAIV"
+        text = "oknQg5bsUYsYD27gICmZRg=="
+        result = decrypt_aes(text,key)
+        self.assertEqual('123456',result)
+
+
