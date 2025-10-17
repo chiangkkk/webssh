@@ -1,6 +1,8 @@
 version: '3'
 services:
   web:
+    image: web-ssh-base
+    container_name: web-ssh-container
     build: .
     ports:
     - "8888:8888"
