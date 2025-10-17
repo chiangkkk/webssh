@@ -674,12 +674,32 @@ jQuery(function($){
   }
 
 
+  function removeUrlParams(url, paramsToRemove) {
+    const params = Array.isArray(paramsToRemove)
+        ? paramsToRemove
+        : [paramsToRemove];
+
+    const urlObj = new URL(url);
+    const searchParams = urlObj.searchParams;
+
+    params.forEach(param => {
+      if (searchParams.has(param)) {
+        searchParams.delete(param);
+      }
+    });
+
+    urlObj.search = searchParams.toString();
+    return urlObj.toString();
+  }
+
   function connect_without_options() {
     // use data from the form
     var form = document.querySelector(form_id),
         inputs = form.querySelectorAll('input[type="file"]'),
         url = form.action,
         data, pk;
+
+    url = removeUrlParams(url, 'token')
 
     disable_file_inputs(inputs);
     data = new FormData(form);
