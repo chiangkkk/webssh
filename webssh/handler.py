@@ -589,7 +589,6 @@ class IndexHandler(MixinHandler, tornado.web.RequestHandler):
         if totp is None:
             totp = u''
         ase_key = self.host_keys_settings['api_aes_key']
-        logging.info(f"api_aes_key={ase_key}")
         if ase_key != '':
             if password != '':
                 password = decrypt_aes(password,ase_key)
