@@ -63,6 +63,13 @@ jQuery(function($){
       event_origin,
       hostname_tester = /((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))|(^\s*((?=.{1,255}$)(?=.*[A-Za-z].*)[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*)\s*$)/;
 
+  // 添加会话项点击事件处理
+  $('.session-item').on('click', function() {
+    if ($(this).hasClass('disabled')) {
+      return;
+    }
+
+  });
 
   function store_items(names, data) {
     var i, name, value;
@@ -345,6 +352,9 @@ jQuery(function($){
   function ajax_complete_callback(resp) {
     button.prop('disabled', false);
     $('.btn-primary.lang[data-lang-key="connect"]').text(i18n.t('connect'));
+
+    // 启用所有会话管理的服务器项
+    $('.session-item').removeClass('disabled').css('cursor', 'pointer');
 
     if (resp.status !== 200) {
       log_status(resp.status + ': ' + resp.statusText, true);
@@ -716,6 +726,9 @@ jQuery(function($){
       button.prop('disabled', true);
       // 更新连接按钮文本为"连接中..."
       $('.btn-primary.lang[data-lang-key="connect"]').text(i18n.t('connecting'));
+      
+      // 禁用所有会话管理的服务器项
+      $('.session-item').addClass('disabled').css('cursor', 'not-allowed');
 
       $.ajax({
           url: url,
@@ -776,6 +789,9 @@ jQuery(function($){
 
     status.text('');
     button.prop('disabled', true);
+    
+    // 禁用所有会话管理的服务器项
+    $('.session-item').addClass('disabled').css('cursor', 'not-allowed');
 
     $.ajax({
         url: url,

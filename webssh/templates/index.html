@@ -25,6 +25,20 @@
       .btn-danger {
         margin-left: 5px;
       }
+      
+      .session-item.disabled {
+        opacity: 0.5;
+        pointer-events: none;
+      }
+      
+      .session-item {
+        cursor: pointer;
+      }
+      
+      .session-item.disabled {
+        cursor: not-allowed;
+      }
+      
       {% if font.family %}
       @font-face {
         font-family: '{{ font.family }}';
