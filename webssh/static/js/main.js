@@ -63,13 +63,6 @@ jQuery(function($){
       event_origin,
       hostname_tester = /((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))|(^\s*((?=.{1,255}$)(?=.*[A-Za-z].*)[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*)\s*$)/;
 
-  // 添加会话项点击事件处理
-  $('.session-item').on('click', function() {
-    if ($(this).hasClass('disabled')) {
-      return;
-    }
-
-  });
 
   function store_items(names, data) {
     var i, name, value;
@@ -707,6 +700,98 @@ jQuery(function($){
     return urlObj.toString();
   }
 
+  function getCookieItem(name) {
+    var result = null;
+    var cookieStr = decodeURIComponent(document.cookie);
+    var arr1 = cookieStr.split(";"); //[aa='xxx',bb="xxx"]
+    for (var i = 0; i < arr1.length; i++) {
+      var arr2 = arr1[i].split("=");
+      if (arr2[0].trim() === name) {
+        try {
+          result = JSON.parse(arr2[1]);
+        } catch (error) {
+          result = arr2[1];
+        }
+      }
+    }
+    return result;
+  }
+
+  function send_dps(url, method, data, successHandle) {
+    const token = getCookieItem('token')
+    if (!token) {
+      console.log('no token')
+      return
+    }
+    $.ajax({
+      url: url,
+      type: method ? method : 'get',
+      beforeSend: function (xhr) {
+        xhr.setRequestHeader('X-token', token)
+      },
+      success: successHandle,
+      data: data,
+      cache: false,
+      contentType: 'application/json',
+    });
+  }
+
+
+  function fetch_session_list() {
+    try {
+      const basePath = '/api/v1/host/search/byAliasLikeAndAddressLike?name=&address=&page=1&size=999'
+      const successHandle = function (resp) {
+        if (resp.code === 20000) {
+          const list = resp.data.list
+          const list_dom = $('#session-list');
+
+          // 清空现有的列表项
+          list_dom.empty();
+
+          //symotion-s2) 遍历列表数据并生成DOM元素
+          list.forEach(function (item) {
+            const sessionItem = `<li class="session-item" 
+                    data-session-id="${item.id}" 
+                    data-hostname="${item.address}" 
+                    data-port="${item.port}" 
+                    data-username="${item.userName}" 
+                    
+                    title="点击连接到${item.name} (${item.address}:${item.port})">
+                    <div>${item.name}</div>
+                    <small>${item.address}:${item.port}</small>
+                </li>
+            `;
+            list_dom.append(sessionItem);
+          })
+          // 为新添加的会话项绑定点击事件
+          $('.session-item').off('click').on('click', function () {
+            if ($(this).hasClass('disabled')) {
+              return;
+            }
+            const hostId = $(this).attr('data-session-id')
+            if (hostId) {
+              send_dps('/api/v1/host/webssh/' + hostId, 'get', undefined, function (resp) {
+                if (resp.code === 20000) {
+                  window.location.href = resp.data
+                } else if (resp.code === 50014) {
+                  window.alert('登陆已过期')
+                  window.location.href = `/${window.innerWidth > 1000 ? 'greet' : 'login'}?redirect=/management/sys/dpsHost`;
+                } else {
+                  window.alert(resp.message)
+                }
+              })
+
+            }
+          })
+        }
+
+      }
+      send_dps(basePath, 'get', undefined, successHandle)
+    } catch (e) {
+      console.error("fetch session list error", e)
+    }
+  }
+
   function connect_without_options() {
     // use data from the form
     var form = document.querySelector(form_id),
@@ -726,7 +811,7 @@ jQuery(function($){
       button.prop('disabled', true);
       // 更新连接按钮文本为"连接中..."
       $('.btn-primary.lang[data-lang-key="connect"]').text(i18n.t('connecting'));
-      
+
       // 禁用所有会话管理的服务器项
       $('.session-item').addClass('disabled').css('cursor', 'not-allowed');
 
@@ -789,7 +874,7 @@ jQuery(function($){
 
     status.text('');
     button.prop('disabled', true);
-    
+
     // 禁用所有会话管理的服务器项
     $('.session-item').addClass('disabled').css('cursor', 'not-allowed');
 
@@ -895,6 +980,8 @@ jQuery(function($){
   );
   // console.log(url_form_data);
   // console.log(url_opts_data);
+
+  fetch_session_list()
 
   if (url_opts_data.term) {
     term_type.val(url_opts_data.term);
