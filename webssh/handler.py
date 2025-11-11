@@ -387,8 +387,7 @@ class IndexHandler(MixinHandler, tornado.web.RequestHandler):
         if self.ssh_client._system_host_keys.lookup(key) is None:
             if self.ssh_client._host_keys.lookup(key) is None:
                 raise tornado.web.HTTPError(
-                        403, 'Connection to {}:{} is not allowed.'.format(
-                            hostname, port)
+                        403, '连接到 {}:{} 不被允许。'.format(hostname, port)
                     )
 
     def get_args(self):
@@ -453,18 +452,18 @@ class IndexHandler(MixinHandler, tornado.web.RequestHandler):
     def ssh_connect(self, args):
         ssh = self.ssh_client
         dst_addr = args[:2]
-        logging.info('Connecting to {}:{}'.format(*dst_addr))
+        logging.info('正在连接 {}:{}'.format(*dst_addr))
 
         try:
             ssh.connect(*args, timeout=options.timeout)
         except socket.error:
-            raise ValueError('Unable to connect to {}:{}'.format(*dst_addr))
+            raise ValueError('无法连接到 {}:{}'.format(*dst_addr))
         except paramiko.BadAuthenticationType:
-            raise ValueError('Bad authentication type.')
+            raise ValueError('错误的认证类型。')
         except paramiko.AuthenticationException:
-            raise ValueError('Authentication failed.')
+            raise ValueError('认证失败。')
         except paramiko.BadHostKeyException:
-            raise ValueError('Bad host key.')
+            raise ValueError('主机密钥错误。')
 
         term = self.get_argument('term', u'') or u'xterm'
         chan = ssh.invoke_shell(term=term)
@@ -498,12 +497,12 @@ class IndexHandler(MixinHandler, tornado.web.RequestHandler):
     def post(self):
         if self.debug and self.get_argument('error', u''):
             # for testing purpose only
-            raise ValueError('Uncaught exception')
+            raise ValueError('未捕获的异常')
 
         ip, port = self.get_client_addr()
         workers = clients.get(ip, {})
         if workers and len(workers) >= options.maxconn:
-            raise tornado.web.HTTPError(403, 'Too many live connections.')
+            raise tornado.web.HTTPError(403, '活动连接数过多,当前连接数:%s'%len(workers) )
 
         self.check_origin()
 
@@ -621,11 +620,11 @@ class WsockHandler(MixinHandler, tornado.websocket.WebSocketHandler):
 
     def open(self):
         self.src_addr = self.get_client_addr()
-        logging.info('Connected from {}:{}'.format(*self.src_addr))
+        logging.info('已连接 {}:{}'.format(*self.src_addr))
 
         workers = clients.get(self.src_addr[0])
         if not workers:
-            self.close(reason='Websocket authentication failed.')
+            self.close(reason='WebSocket认证失败。')
             return
 
         try:
@@ -641,7 +640,7 @@ class WsockHandler(MixinHandler, tornado.websocket.WebSocketHandler):
                 self.worker_ref = weakref.ref(worker)
                 self.loop.add_handler(worker.fd, worker, IOLoop.READ)
             else:
-                self.close(reason='Websocket authentication failed.')
+                self.close(reason='WebSocket认证失败。')
 
     def on_message(self, message):
         logging.debug('{!r} from {}:{}'.format(message, *self.src_addr))
@@ -653,11 +652,11 @@ class WsockHandler(MixinHandler, tornado.websocket.WebSocketHandler):
                     *self.src_addr
                 )
             )
-            self.close(reason='No worker found')
+            self.close(reason='未找到工作进程')
             return
 
         if worker.closed:
-            self.close(reason='Worker closed')
+            self.close(reason='工作进程已关闭')
             return
 
         try:
@@ -681,9 +680,9 @@ class WsockHandler(MixinHandler, tornado.websocket.WebSocketHandler):
             worker.on_write()
 
     def on_close(self):
-        logging.info('Disconnected from {}:{}'.format(*self.src_addr))
+        logging.info('断开连接 {}:{}'.format(*self.src_addr))
         if not self.close_reason:
-            self.close_reason = 'client disconnected'
+            self.close_reason = '客户端断开连接'
 
         worker = self.worker_ref() if self.worker_ref else None
         if worker:

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8">
     <title> WebSSH </title>
@@ -7,6 +7,7 @@
     <link href="static/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
     <link href="static/css/xterm.min.css" rel="stylesheet" type="text/css"/>
     <link href="static/css/fullscreen.min.css" rel="stylesheet" type="text/css"/>
+    <link href="static/css/custom.css" rel="stylesheet" type="text/css"/>
     <style>
       .row {
         margin-top: 15px;
@@ -37,58 +38,91 @@
     </style>
   </head>
   <body>
-    <div id="waiter" style="display: none"> Connecting ... </div>
+    <div id="waiter" style="display: none"> 连接中... </div>
 
-    <div class="container form-container" style="display: none">
-      <form id="connect" action="" method="post" enctype="multipart/form-data"{% if debug %} novalidate{% end %}>
-        <div class="row">
-          <div class="col">
-            <label for="Hostname">Hostname</label>
-            <input class="form-control" type="text" id="hostname" name="hostname" value="" required>
-          </div>
-          <div class="col">
-            <label for="Port">Port</label>
-            <input class="form-control" type="number" id="port" name="port" placeholder="22" value="" min=1 max=65535>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <label for="Username">Username</label>
-            <input class="form-control" type="text" id="username" name="username" value="" required>
-          </div>
-          <div class="col">
-            <label for="Password">Password</label>
-            <input class="form-control" type="password" id="password" name="password" value="">
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <label for="Username">Private Key</label>
-            <input class="form-control" type="file" id="privatekey" name="privatekey" value="">
-          </div>
-          <div class="col">
-            <label for="Passphrase">Passphrase</label>
-            <input class="form-control" type="password" id="passphrase" name="passphrase" value="">
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <label for="totp">Totp (time-based one-time password)</label>
-            <input class="form-control" type="password" id="totp" name="totp" value="">
-          </div>
-          <div class="col">
-          </div>
-        </div>
-        <input type="hidden" id="term" name="term" value="xterm-256color">
-        {% module xsrf_form_html() %}
-        <button type="submit" class="btn btn-primary">Connect</button>
-        <button type="reset" class="btn btn-danger">Reset</button>
-      </form>
+    <div class="top-bar form-container"  style="display: none">
+      <div></div> <!-- 空的左侧占位元素 -->
+      <h1 class="lang" data-lang-key="sshTerminalTitle">SSH 终端</h1>
+      <div class="language-switcher">
+        <button id="lang-zh" type="button" class="btn btn-outline-primary btn-sm">中文</button>
+        <button id="lang-en" type="button" class="btn btn-outline-secondary btn-sm">English</button>
+      </div>
     </div>
 
-    <div class="container">
-      <div id="status" style="color: red; white-space: pre-line;"></div>
-      <div id="terminal"></div>
+    <div class="main-container">
+      <div class="session-sidebar form-container" style="display: none">
+        <h3 class="lang" data-lang-key="sessionManager">会话管理</h3>
+        <ul class="session-list" id="session-list">
+          <!-- 会话列表将通过JavaScript动态生成 -->
+          <li class="session-item" data-session-id="1" data-hostname="192.168.1.100" data-port="22" data-username="user1" title="点击连接到服务器1 (192.168.1.100:22)">
+            <div>服务器1</div>
+            <small>192.168.1.100:22</small>
+          </li>
+          <li class="session-item" data-session-id="2" data-hostname="192.168.1.101" data-port="22" data-username="user2" title="点击连接到服务器2 (192.168.1.101:22)">
+            <div>服务器2</div>
+            <small>192.168.1.101:22</small>
+          </li>
+          <li class="session-item" data-session-id="3" data-hostname="192.168.1.102" data-port="22" data-username="user3" title="点击连接到服务器3 (192.168.1.102:22)">
+            <div>服务器3</div>
+            <small>192.168.1.102:22</small>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="main-content">
+
+        <div class="container form-container" style="display: none">
+          <form id="connect" action="" method="post" enctype="multipart/form-data"{% if debug %} novalidate{% end %}>
+            <div class="row">
+              <div class="col">
+                <label for="hostname" class="lang" data-lang-key="hostname">主机名</label>
+                <input class="form-control" type="text" id="hostname" name="hostname" value="" required>
+              </div>
+              <div class="col">
+                <label for="port" class="lang" data-lang-key="port">端口</label>
+                <input class="form-control" type="number" id="port" name="port" placeholder="22" value="" min=1 max=65535>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <label for="username" class="lang" data-lang-key="username">用户名</label>
+                <input class="form-control" type="text" id="username" name="username" value="" required>
+              </div>
+              <div class="col">
+                <label for="password" class="lang" data-lang-key="password">密码</label>
+                <input class="form-control" type="password" id="password" name="password" value="">
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <label for="privatekey" class="lang" data-lang-key="privatekey">私钥</label>
+                <input class="form-control" type="file" id="privatekey" name="privatekey" value="">
+              </div>
+              <div class="col">
+                <label for="passphrase" class="lang" data-lang-key="passphrase">密码短语(私钥密码)</label>
+                <input class="form-control" type="password" id="passphrase" name="passphrase" value="">
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <label for="totp" class="lang" data-lang-key="totp">动态口令</label>
+                <input class="form-control" type="password" id="totp" name="totp" value="">
+              </div>
+              <div class="col">
+              </div>
+            </div>
+            <input type="hidden" id="term" name="term" value="xterm-256color">
+            {% module xsrf_form_html() %}
+            <button type="submit" class="btn btn-primary lang" data-lang-key="connect">连接</button>
+            <button type="reset" class="btn btn-danger lang" data-lang-key="reset">重置</button>
+          </form>
+        </div>
+
+        <div class="container terminal-container">
+          <div id="status" style="color: red; white-space: pre-line;"></div>
+          <div id="terminal"></div>
+        </div>
+      </div>
     </div>
 
     <script src="static/js/jquery.min.js"></script>
@@ -96,6 +130,7 @@
     <script src="static/js/bootstrap.min.js"></script>
     <script src="static/js/xterm.min.js"></script>
     <script src="static/js/xterm-addon-fit.min.js"></script>
+    <script src="static/js/i18n.js"></script>
     <script src="static/js/main.js"></script>
   </body>
 </html>

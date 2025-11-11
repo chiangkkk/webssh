@@ -52,7 +52,7 @@ jQuery(function($){
       CONNECTING = 1,
       CONNECTED = 2,
       state = DISCONNECTED,
-      messages = {1: 'This client is connecting ...', 2: 'This client is already connnected.'},
+      messages = {1: i18n.t('this_client_is_connecting'), 2: i18n.t('this_client_is_already_connected')},
       key_max_size = 16384,
       fields = ['hostname', 'port', 'username'],
       form_keys = fields.concat(['password', 'totp', 'token']),
@@ -344,6 +344,7 @@ jQuery(function($){
 
   function ajax_complete_callback(resp) {
     button.prop('disabled', false);
+    $('.btn-primary.lang[data-lang-key="connect"]').text(i18n.t('connect'));
 
     if (resp.status !== 200) {
       log_status(resp.status + ': ' + resp.statusText, true);
@@ -538,6 +539,8 @@ jQuery(function($){
           sock.send(JSON.stringify({'data': url_opts_data.command+'\r'}));
         }, 500);
       }
+      // 连接成功
+      log_status(i18n.t('connectionSuccessful'), false);
     };
 
     sock.onmessage = function(msg) {
@@ -546,6 +549,8 @@ jQuery(function($){
 
     sock.onerror = function(e) {
       console.error(e);
+      // 连接错误
+      log_status(i18n.t('connectionFailed') + ': ' + e.message, true);
     };
 
     sock.onclose = function(e) {
@@ -612,10 +617,10 @@ jQuery(function($){
         errors = [], size;
 
     if (!hostname) {
-      errors.push('Value of hostname is required.');
+      errors.push(i18n.t('value_of_hostname_required'));
     } else {
       if (!hostname_tester.test(hostname)) {
-         errors.push('Invalid hostname: ' + hostname);
+         errors.push(i18n.t('invalid_hostname') + hostname);
       }
     }
 
@@ -623,18 +628,18 @@ jQuery(function($){
       port = 22;
     } else {
       if (!(port > 0 && port <= 65535)) {
-        errors.push('Invalid port: ' + port);
+        errors.push(i18n.t('invalid_port') + port);
       }
     }
 
     if (!username) {
-      errors.push('Value of username is required.');
+      errors.push(i18n.t('username_required'));
     }
 
     if (pk) {
       size = pk.size || pk.length;
       if (size > key_max_size) {
-        errors.push('Invalid private key: ' + pk.name || '');
+        errors.push(i18n.t('invalid_private_key') + (pk.name || ''));
       }
     }
 
@@ -709,6 +714,8 @@ jQuery(function($){
     function ajax_post() {
       status.text('');
       button.prop('disabled', true);
+      // 更新连接按钮文本为"连接中..."
+      $('.btn-primary.lang[data-lang-key="connect"]').text(i18n.t('connecting'));
 
       $.ajax({
           url: url,
@@ -723,6 +730,9 @@ jQuery(function($){
 
     var result = validate_form_data(data);
     if (!result.valid) {
+      // 验证失败时恢复按钮状态
+      button.prop('disabled', false);
+      $('.btn-primary.lang[data-lang-key="connect"]').text(i18n.t('connect'));
       log_status(result.errors.join('\n'));
       return;
     }
@@ -730,7 +740,10 @@ jQuery(function($){
     if (pk && pk.size && !debug) {
       read_file_as_text(pk, function(text) {
         if (text === undefined) {
-            log_status('Invalid private key: ' + pk.name);
+            // 读取私钥失败时恢复按钮状态
+            button.prop('disabled', false);
+            $('.btn-primary.lang[data-lang-key="connect"]').text(i18n.t('connect'));
+            log_status(i18n.t('invalid_private_key') + (pk.name || ''));
         } else {
           ajax_post();
         }
@@ -872,9 +885,10 @@ jQuery(function($){
   }
 
   if (url_form_data.password === null) {
-    log_status('Password via url must be encoded in base64.');
+    log_status(i18n.t('password_via_url_encoded'));
   } else {
     if (get_object_length(url_form_data)) {
+
       waiter.show();
       connect(url_form_data);
     } else {

@@ -297,7 +297,7 @@ class TestWsockHandler(unittest.TestCase):
         obj.worker_ref = ref
         WsockHandler.on_message(obj, b'{"data": "somestuff"}')
         self.assertGreaterEqual(ref.count, 1)
-        obj.close.assert_called_with(reason='No worker found')
+        obj.close.assert_called_with(reason='未找到工作进程')
 
     def test_worker_closed(self):
         request = HTTPServerRequest(uri='/')
@@ -315,7 +315,7 @@ class TestWsockHandler(unittest.TestCase):
         ref = FakeWeakRef()
         obj.worker_ref = ref
         WsockHandler.on_message(obj, b'{"data": "somestuff"}')
-        obj.close.assert_called_with(reason='Worker closed')
+        obj.close.assert_called_with(reason='工作进程已关闭')
 
 class TestIndexHandler(unittest.TestCase):
     def test_null_in_encoding(self):

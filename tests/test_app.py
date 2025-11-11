@@ -208,7 +208,7 @@ class TestAppBasic(TestAppBase):
         ws = yield tornado.websocket.websocket_connect(ws_url)
         msg = yield ws.read_message()
         self.assertIsNone(msg)
-        self.assertEqual(ws.close_reason, 'Websocket authentication failed.')
+        self.assertEqual(ws.close_reason, 'WebSocket认证失败。')
 
     @tornado.testing.gen_test
     def test_app_with_correct_credentials_but_ip_not_matched(self):
@@ -224,7 +224,7 @@ class TestAppBasic(TestAppBase):
         ws = yield tornado.websocket.websocket_connect(ws_url)
         msg = yield ws.read_message()
         self.assertIsNone(msg)
-        self.assertEqual(ws.close_reason, 'Websocket authentication failed.')
+        self.assertEqual(ws.close_reason, 'WebSocket认证失败。')
         handler.clients = clients
 
     @tornado.testing.gen_test
